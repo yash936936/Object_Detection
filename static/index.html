@@ -1,0 +1,430 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #4B6CC1 0%, #2E4A99 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .navbar {
+            background: rgba(248, 241, 233, 0.95) !important; /* Off-white */
+            backdrop-filter: blur(10px);
+        }
+
+        .main-content {
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: rgba(248, 241, 233, 0.95); /* Off-white */
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .canvas-container {
+            background: rgba(248, 241, 233, 0.95); /* Off-white */
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        #canvas, #preview-image {
+            max-width: 100%;
+            border: 3px solid #4B6CC1; /* Blue shade */
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #4B6CC1, #2E4A99); /* Blue gradient */
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: #F8F1E9; /* Off-white */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 193, 0.3);
+        }
+
+        .loading-animation {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner-border {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-width: 0.3em;
+            color: #4B6CC1; /* Blue shade */
+        }
+
+        .results-section {
+            background: rgba(248, 241, 233, 0.95); /* Off-white */
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .detection-item {
+            background: linear-gradient(45deg, #F8F1E9, #EDE4D9); /* Off-white gradient */
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .confidence-badge {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: #F8F1E9; /* Off-white */
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(248, 241, 233, 0.8); /* Off-white */
+            border-radius: 10px;
+            margin: 5px;
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4B6CC1; /* Blue shade */
+        }
+
+        .error-message {
+            background: #dc3545;
+            color: #F8F1E9; /* Off-white */
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px 15px;
+            }
+
+            .upload-section, .canvas-container, .results-section {
+                padding: 20px;
+            }
+
+            .stat-item {
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <strong>🎯 Object Detection System</strong>
+            </a>
+            <div class="navbar-nav ml-auto">
+                <span class="navbar-text">
+                    Status: <span id="status">Ready</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2 class="text-center mb-4">🚀 Upload Image for Detection</h2>
+            <div class="text-center">
+                <div class="file-input-wrapper">
+                    <input type="file" id="image-upload" accept="image/*">
+                    <label for="image-upload" class="upload-btn">
+                        📁 Choose Image
+                    </label>
+                </div>
+                <p class="text-muted mt-3">Supported formats: JPG, PNG, JPEG, WebP</p>
+                <div id="image-preview" style="margin-top: 20px; display: none;">
+                    <h5>Preview</h5>
+                    <img id="preview-image" style="max-height: 200px;">
+                </div>
+            </div>
+
+            <div class="loading-animation text-center" id="loading-animation">
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Processing...</span>
+                </div>
+                <p class="mt-2">🔍 Analyzing image...</p>
+            </div>
+
+            <div class="error-message" id="error-message"></div>
+        </div>
+
+        <!-- Canvas Section -->
+        <div class="canvas-container" id="canvas-container" style="display: none;">
+            <h3>🖼️ Detection Results</h3>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="results-section" style="display: none;">
+            <h3>📊 Detected Objects</h3>
+            <div id="detection-results"></div>
+
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-objects">0</div>
+                    <div>Total Objects</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="avg-confidence">0%</div>
+                    <div>Avg Confidence</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="unique-classes">0</div>
+                    <div>Unique Classes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const fileInput = document.getElementById('image-upload');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d', { alpha: false });
+            const loading = document.getElementById('loading-animation');
+            const errorMessage = document.getElementById('error-message');
+            const canvasContainer = document.getElementById('canvas-container');
+            const resultsSection = document.getElementById('results-section');
+            const detectionResults = document.getElementById('detection-results');
+            const status = document.getElementById('status');
+            const imagePreview = document.getElementById('image-preview');
+            const previewImage = document.getElementById('preview-image');
+
+            // Color palette for different classes
+            const colors = [
+                '#4B6CC1', '#2E4A99', '#F8F1E9', '#28a745', '#dc3545',
+                '#6c757d', '#007bff', '#6610f2', '#17a2b8', '#ffc107'
+            ];
+
+            let colorMap = {};
+
+            function getColorForClass(className) {
+                if (!colorMap[className]) {
+                    const colorIndex = Object.keys(colorMap).length % colors.length;
+                    colorMap[className] = colors[colorIndex];
+                }
+                return colorMap[className];
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 5000);
+            }
+
+            function updateStats(predictions) {
+                const totalObjects = predictions.length;
+                const avgConfidence = predictions.length > 0
+                    ? (predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length * 100).toFixed(1)
+                    : 0;
+                const uniqueClasses = new Set(predictions.map(p => p.class_name)).size;
+
+                document.getElementById('total-objects').textContent = totalObjects;
+                document.getElementById('avg-confidence').textContent = avgConfidence + '%';
+                document.getElementById('unique-classes').textContent = uniqueClasses;
+            }
+
+            function drawDetections(image, predictions) {
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = image.width * dpr;
+                canvas.height = image.height * dpr;
+                canvas.style.width = `${image.width}px`;
+                canvas.style.height = `${image.height}px`;
+                ctx.scale(dpr, dpr);
+
+                ctx.drawImage(image, 0, 0, image.width, image.height);
+
+                predictions.forEach((pred, index) => {
+                    const [cx, cy, w, h] = pred.bbox;
+                    const x = cx - w / 2;
+                    const y = cy - h / 2;
+
+                    const color = getColorForClass(pred.class_name);
+
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, w, h);
+
+                    const label = `${pred.class_name} ${(pred.confidence * 100).toFixed(1)}%`;
+                    ctx.font = 'bold 16px Arial';
+                    const textWidth = ctx.measureText(label).width;
+                    const textHeight = 20;
+
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y - textHeight - 5, textWidth + 10, textHeight + 5);
+
+                    ctx.fillStyle = '#F8F1E9';
+                    ctx.fillText(label, x + 5, y - 8);
+                });
+            }
+
+            function displayResults(predictions) {
+                detectionResults.innerHTML = '';
+
+                if (predictions.length === 0) {
+                    detectionResults.innerHTML = '<p class="text-center text-muted">No objects detected in this image.</p>';
+                    return;
+                }
+
+                predictions.forEach((pred, index) => {
+                    const color = getColorForClass( pred.class_name);
+                    const item = document.createElement('div');
+                    item.className = 'detection-item';
+                    item.innerHTML = `
+                        <div>
+                            <span style="display: inline-block; width: 20px; height: 20px; background: ${color}; border-radius: 50%; margin-right: 10px;"></span>
+                            <strong>${pred.class_name}</strong>
+                        </div>
+                        <div class="confidence-badge">${(pred.confidence * 100).toFixed(2)}%</div>
+                    `;
+                    detectionResults.appendChild(item);
+                });
+            }
+
+            fileInput.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    imagePreview.style.display = 'none';
+                    return;
+                }
+
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                imagePreview.style.display = 'block';
+                previewImage.src = img.src;
+
+                img.onload = async function() {
+                    try {
+                        errorMessage.style.display = 'none';
+                        canvasContainer.style.display = 'none';
+                        resultsSection.style.display = 'none';
+                        loading.style.display = 'block';
+                        status.textContent = 'Processing...';
+
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        const response = await fetch('/detect', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        const predictions = data.predictions || [];
+
+                        drawDetections(img, predictions);
+                        displayResults(predictions);
+                        updateStats(predictions);
+
+                        canvasContainer.style.display = 'block';
+                        resultsSection.style.display = 'block';
+                        status.textContent = 'Detection Complete';
+                        status.style.color = '#28a745';
+
+                    } catch (error) {
+                        console.error('Detection failed:', error);
+                        showError('Detection failed: ' + error.message);
+                        status.textContent = 'Error';
+                        status.style.color = '#dc3545';
+                    } finally {
+                        loading.style.display = 'none';
+                    }
+                };
+
+                img.onerror = function() {
+                    showError('Failed to load image. Please try a different file.');
+                    loading.style.display = 'none';
+                    status.textContent = 'Error';
+                    status.style.color = '#dc3545';
+                    imagePreview.style.display = 'none';
+                };
+            });
+
+            fetch('/health')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.model_loaded) {
+                        status.textContent = 'Ready';
+                        status.style.color = '#28a745';
+                    } else {
+                        status.textContent = 'Model Not Loaded';
+                        status.style.color = '#dc3545';
+                    }
+                })
+                .catch(error => {
+                    status.textContent = 'Server Offline';
+                    status.style.color = '#dc3545';
+                });
+        });
+    </script>
+</body>
+</html>
