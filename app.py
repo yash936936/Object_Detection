@@ -45,7 +45,7 @@ except FileNotFoundError:
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Model path
-MODEL_PATH = r"D:\Users\yash\downloads\best.pt"
+MODEL_PATH = "best.pt"
 
 # Initialize YOLO model
 model = None
